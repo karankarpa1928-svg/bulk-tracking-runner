@@ -1,0 +1,12 @@
+{
+  "name": "github-order-runner",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node runner.js"
+  },
+  "dependencies": {
+    "google-auth-library": "^9.0.0",
+    "google-spreadsheet": "^4.1.0"
+  }
+}
