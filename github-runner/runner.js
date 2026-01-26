@@ -1,9 +1,9 @@
 /*************************************************
- * DOLE ORDER RUNNER – FULL PIPELINE
+ * DOLE ORDER RUNNER – FINAL VERSION
  * 1. Read ORDER_INPUT
  * 2. Scrape DOLE
  * 3. Write AUTO_SNAPSHOT
- * 4. Update Last_Processed
+ * 4. Update Status + Last_Processed
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
@@ -48,13 +48,11 @@ async function run() {
   const doc = new GoogleSpreadsheet(SHEET_ID, authClient);
   await doc.loadInfo();
 
-  console.log("📄 Spreadsheet:", doc.title);
-
   const inputSheet = doc.sheetsByTitle[INPUT_SHEET];
   const outputSheet = doc.sheetsByTitle[OUTPUT_SHEET];
 
   if (!inputSheet || !outputSheet) {
-    throw new Error("❌ Required sheet missing");
+    throw new Error("❌ Required sheet not found");
   }
 
   await inputSheet.loadHeaderRow();
@@ -75,11 +73,7 @@ async function run() {
     const orderId = row.get("Order_ID");
     const lastProcessed = row.get("Last_Processed");
 
-    if (!orderId) continue;
-    if (lastProcessed) {
-      console.log(`⏭ Skipping ${orderId} (already processed)`);
-      continue;
-    }
+    if (!orderId || lastProcessed) continue;
 
     console.log(`🔍 Processing Order ${orderId}`);
 
@@ -110,6 +104,8 @@ async function run() {
         { timeout: TIMEOUT }
       );
 
+      const now = new Date(); // ✅ REAL DATE OBJECT
+
       const data = await page.evaluate(() => {
         const table = [...document.querySelectorAll("table")].find(t =>
           t.innerText.includes("Cargo Description")
@@ -120,13 +116,12 @@ async function run() {
         if (!tds || tds.length < 6) return null;
 
         return {
-          Order_ID: tds[1].innerText.replace("Order #", "").trim(),
-          Cargo_Description: tds[0].innerText.trim(),
-          Status: tds[2].innerText.trim(),
-          Pickup_Date: tds[3].innerText.trim(),
+          OrderNumber: tds[1].innerText.replace("Order #", "").trim(),
+          CargoDescription: tds[0].innerText.trim(),
+          OrderStatus: tds[2].innerText.trim(),
+          PickupDate: tds[3].innerText.trim(),
           Carrier: tds[4].innerText.trim(),
           Container: tds[5].innerText.trim(),
-          Last_Updated: new Date().toISOString(),
         };
       });
 
@@ -136,11 +131,14 @@ async function run() {
       }
 
       // ---------- WRITE AUTO_SNAPSHOT ----------
-      await outputSheet.addRow(data);
+      await outputSheet.addRow({
+        ...data,
+        LastUpdated: now, // ✅ Date, not string
+      });
 
-      // ---------- UPDATE INPUT SHEET ----------
-      row.set("Status", data.Status);
-      row.set("Last_Processed", new Date().toISOString());
+      // ---------- UPDATE ORDER_INPUT ----------
+      row.set("Status", data.OrderStatus);
+      row.set("Last_Processed", now); // ✅ Date, not string
       await row.save();
 
       console.log(`✅ Completed ${orderId}`);
