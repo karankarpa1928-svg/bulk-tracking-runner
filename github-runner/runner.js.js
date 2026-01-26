@@ -1,6 +1,6 @@
 /*************************************************
  * ORDER RUNNER – GITHUB ACTION READY
- * STEP 1: READ GOOGLE SHEET (FIXED)
+ * READ ORDER_INPUT SHEET (FINAL)
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
@@ -18,7 +18,7 @@ const SHEET_NAME = "ORDER_INPUT";
 // ==============================
 
 if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-  console.error("❌ Missing Google credentials in environment variables");
+  console.error("❌ Missing Google credentials");
   process.exit(1);
 }
 
@@ -47,39 +47,20 @@ async function run() {
       throw new Error(`Sheet "${SHEET_NAME}" not found`);
     }
 
-    // 🔑 CRITICAL FIX
+    // 🔑 REQUIRED
     await sheet.loadHeaderRow();
 
-    console.log("📑 Header row loaded");
-    console.log("🔑 Headers:", sheet.headerValues);
+    console.log("📑 Headers:", sheet.headerValues);
 
-    // Read rows AFTER headers are loaded
     const rows = await sheet.getRows();
     console.log(`📦 Total rows found: ${rows.length}`);
 
-    if (!rows.length) {
-      console.log("⚠️ No data rows found");
-      return;
-    }
-
-    // Detect Order ID column safely
-    const orderIdHeader = sheet.headerValues.find(h =>
-      h.toLowerCase().replace(/_/g, "").includes("order")
-    );
-
-    if (!orderIdHeader) {
-      throw new Error("❌ Order_ID column not found in header row");
-    }
-
-    console.log(`✅ Using "${orderIdHeader}" as Order ID column`);
-
-    // Log rows
     rows.forEach((row, index) => {
-      const orderId = row[orderIdHeader];
-      const status = row.Status || row.status || "";
+      const orderId = row.get("Order_ID");
+      const status = row.get("Status") || "";
 
       if (!orderId) {
-        console.log(`⚠️ Row ${index + 2} skipped (empty Order ID)`);
+        console.log(`⚠️ Row ${index + 2} skipped (empty Order_ID)`);
         return;
       }
 
