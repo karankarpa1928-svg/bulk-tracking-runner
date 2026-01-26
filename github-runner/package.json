@@ -1,12 +1,10 @@
 {
-  "name": "github-order-runner",
+  "name": "bulk-tracking-runner",
   "version": "1.0.0",
-  "type": "commonjs",
-  "scripts": {
-    "start": "node runner.js"
-  },
+  "private": true,
   "dependencies": {
     "google-auth-library": "^9.0.0",
-    "google-spreadsheet": "^4.1.0"
+    "google-spreadsheet": "^4.1.0",
+    "puppeteer": "^22.0.0"
   }
 }
