@@ -1,6 +1,6 @@
 /*************************************************
  * ORDER RUNNER – GITHUB ACTION READY
- * STEP 1: READ GOOGLE SHEET (DEFENSIVE)
+ * STEP 1: READ GOOGLE SHEET (FIXED)
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
@@ -10,14 +10,11 @@ const { JWT } = require("google-auth-library");
 // CONFIG
 // ==============================
 
-// Spreadsheet ID ONLY (no /edit, no gid)
 const SHEET_ID = "1g8bxorpSd56EB72QKhkLiTjgTeKluiYH6JESot06tz8";
-
-// Sheet name to read
 const SHEET_NAME = "ORDER_INPUT";
 
 // ==============================
-// AUTH (ENV BASED – GITHUB SAFE)
+// AUTH
 // ==============================
 
 if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
@@ -28,10 +25,7 @@ if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
 const authClient = new JWT({
   email: process.env.GOOGLE_CLIENT_EMAIL,
   key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-  scopes: [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive.readonly",
-  ],
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
 // ==============================
@@ -42,48 +36,46 @@ async function run() {
   try {
     console.log("🚀 Runner started...");
 
-    // Create spreadsheet instance WITH AUTH
     const doc = new GoogleSpreadsheet(SHEET_ID, authClient);
-
-    // Load spreadsheet info
     await doc.loadInfo();
 
     console.log("✅ Auth success");
     console.log("📄 Spreadsheet title:", doc.title);
 
-    // Get target sheet
     const sheet = doc.sheetsByTitle[SHEET_NAME];
     if (!sheet) {
       throw new Error(`Sheet "${SHEET_NAME}" not found`);
     }
 
-    // Read rows
+    // 🔑 CRITICAL FIX
+    await sheet.loadHeaderRow();
+
+    console.log("📑 Header row loaded");
+    console.log("🔑 Headers:", sheet.headerValues);
+
+    // Read rows AFTER headers are loaded
     const rows = await sheet.getRows();
     console.log(`📦 Total rows found: ${rows.length}`);
 
     if (!rows.length) {
-      console.log("⚠️ Sheet is empty");
+      console.log("⚠️ No data rows found");
       return;
     }
 
-    // 🔍 PROVE header → key mapping (critical debug)
-    const keys = Object.keys(rows[0]);
-    console.log("🔑 Detected row keys:", keys);
-
     // Detect Order ID column safely
-    const orderIdKey = keys.find(k =>
-      k.toLowerCase().replace(/_/g, "").includes("order")
+    const orderIdHeader = sheet.headerValues.find(h =>
+      h.toLowerCase().replace(/_/g, "").includes("order")
     );
 
-    if (!orderIdKey) {
-      throw new Error("❌ Could not detect Order ID column");
+    if (!orderIdHeader) {
+      throw new Error("❌ Order_ID column not found in header row");
     }
 
-    console.log(`✅ Using "${orderIdKey}" as Order ID key`);
+    console.log(`✅ Using "${orderIdHeader}" as Order ID column`);
 
-    // Log rows safely
+    // Log rows
     rows.forEach((row, index) => {
-      const orderId = row[orderIdKey];
+      const orderId = row[orderIdHeader];
       const status = row.Status || row.status || "";
 
       if (!orderId) {
