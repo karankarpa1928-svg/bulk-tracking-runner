@@ -1,6 +1,6 @@
 /*************************************************
  * ORDER RUNNER – GITHUB ACTION READY
- * STEP 1: READ SHEET ONLY
+ * STEP 1: READ GOOGLE SHEET (DEFENSIVE)
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
@@ -61,10 +61,38 @@ async function run() {
     const rows = await sheet.getRows();
     console.log(`📦 Total rows found: ${rows.length}`);
 
-    // Log row data
+    if (!rows.length) {
+      console.log("⚠️ Sheet is empty");
+      return;
+    }
+
+    // 🔍 PROVE header → key mapping (critical debug)
+    const keys = Object.keys(rows[0]);
+    console.log("🔑 Detected row keys:", keys);
+
+    // Detect Order ID column safely
+    const orderIdKey = keys.find(k =>
+      k.toLowerCase().replace(/_/g, "").includes("order")
+    );
+
+    if (!orderIdKey) {
+      throw new Error("❌ Could not detect Order ID column");
+    }
+
+    console.log(`✅ Using "${orderIdKey}" as Order ID key`);
+
+    // Log rows safely
     rows.forEach((row, index) => {
+      const orderId = row[orderIdKey];
+      const status = row.Status || row.status || "";
+
+      if (!orderId) {
+        console.log(`⚠️ Row ${index + 2} skipped (empty Order ID)`);
+        return;
+      }
+
       console.log(
-        `Row ${index + 2} | Order_ID: ${row.Order_ID} | Status: ${row.Status}`
+        `Row ${index + 2} | Order_ID: ${orderId} | Status: ${status}`
       );
     });
 
