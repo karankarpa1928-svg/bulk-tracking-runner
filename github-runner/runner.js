@@ -1,14 +1,15 @@
 /*************************************************
- * DOLE ORDER RUNNER – FINAL VERSION
+ * DOLE ORDER RUNNER – FINAL (APPS SCRIPT CONTROLLED)
  * 1. Read ORDER_INPUT
  * 2. Scrape DOLE
- * 3. Write AUTO_SNAPSHOT
+ * 3. Send results to Apps Script
  * 4. Update Status + Last_Processed
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 const { JWT } = require("google-auth-library");
 const puppeteer = require("puppeteer");
+const axios = require("axios");
 
 // ==============================
 // CONFIG
@@ -17,10 +18,13 @@ const puppeteer = require("puppeteer");
 const SHEET_ID = "1g8bxorpSd56EB72QKhkLiTjgTeKluiYH6JESot06tz8";
 
 const INPUT_SHEET = "ORDER_INPUT";
-const OUTPUT_SHEET = "AUTO_SNAPSHOT";
 
 const DOLE_URL = "https://dole.my.salesforce-sites.com/truckerinfo";
 const TIMEOUT = 45000;
+
+// ✅ APPS SCRIPT WEB APP
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbyBsEJ8ZUc7K7CUouJAaLHi6u-f5TRPEgnmcd5-jX57GlMv7LZCeW1_RyZCjAT1R15QaQ/exec";
 
 // ==============================
 // AUTH
@@ -49,17 +53,14 @@ async function run() {
   await doc.loadInfo();
 
   const inputSheet = doc.sheetsByTitle[INPUT_SHEET];
-  const outputSheet = doc.sheetsByTitle[OUTPUT_SHEET];
-
-  if (!inputSheet || !outputSheet) {
-    throw new Error("❌ Required sheet not found");
-  }
+  if (!inputSheet) throw new Error("❌ ORDER_INPUT sheet not found");
 
   await inputSheet.loadHeaderRow();
-  await outputSheet.loadHeaderRow();
-
   const rows = await inputSheet.getRows();
+
   console.log(`📦 Orders found: ${rows.length}`);
+
+  const collectedRows = [];
 
   // ---------- PUPPETEER ----------
   const browser = await puppeteer.launch({
@@ -104,8 +105,6 @@ async function run() {
         { timeout: TIMEOUT }
       );
 
-      const now = new Date(); // ✅ REAL DATE OBJECT
-
       const data = await page.evaluate(() => {
         const table = [...document.querySelectorAll("table")].find(t =>
           t.innerText.includes("Cargo Description")
@@ -126,19 +125,15 @@ async function run() {
       });
 
       if (!data) {
-        console.log(`⚠️ No data found for ${orderId}`);
+        console.log(`⚠️ No data for ${orderId}`);
         continue;
       }
 
-      // ---------- WRITE AUTO_SNAPSHOT ----------
-      await outputSheet.addRow({
-        ...data,
-        LastUpdated: now, // ✅ Date, not string
-      });
+      collectedRows.push(data);
 
-      // ---------- UPDATE ORDER_INPUT ----------
+      // ✅ Update ORDER_INPUT
       row.set("Status", data.OrderStatus);
-      row.set("Last_Processed", now); // ✅ Date, not string
+      row.set("Last_Processed", new Date());
       await row.save();
 
       console.log(`✅ Completed ${orderId}`);
@@ -149,6 +144,18 @@ async function run() {
   }
 
   await browser.close();
+
+  // ---------- SEND TO APPS SCRIPT ----------
+  if (collectedRows.length) {
+    console.log(`📤 Sending ${collectedRows.length} rows to Apps Script`);
+
+    await axios.post(APPS_SCRIPT_URL, {
+      rows: collectedRows,
+    });
+  } else {
+    console.log("ℹ️ No new rows to send");
+  }
+
   console.log("🎉 All done");
 }
 
