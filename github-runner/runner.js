@@ -1,9 +1,8 @@
 /*************************************************
- * DOLE ORDER RUNNER – FINAL (APPS SCRIPT CONTROLLED)
- * 1. Read ORDER_INPUT
+ * DOLE ORDER RUNNER – ORDER_ID ONLY
+ * 1. Read Order_ID from ORDER_INPUT
  * 2. Scrape DOLE
  * 3. Send results to Apps Script
- * 4. Update Status + Last_Processed
  *************************************************/
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
@@ -16,13 +15,12 @@ const axios = require("axios");
 // ==============================
 
 const SHEET_ID = "1g8bxorpSd56EB72QKhkLiTjgTeKluiYH6JESot06tz8";
-
 const INPUT_SHEET = "ORDER_INPUT";
 
 const DOLE_URL = "https://dole.my.salesforce-sites.com/truckerinfo";
 const TIMEOUT = 45000;
 
-// ✅ APPS SCRIPT WEB APP
+// Apps Script Web App
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyBsEJ8ZUc7K7CUouJAaLHi6u-f5TRPEgnmcd5-jX57GlMv7LZCeW1_RyZCjAT1R15QaQ/exec";
 
@@ -48,7 +46,7 @@ const authClient = new JWT({
 async function run() {
   console.log("🚀 Runner started");
 
-  // ---------- GOOGLE SHEETS ----------
+  // ---------- READ ORDER_INPUT ----------
   const doc = new GoogleSpreadsheet(SHEET_ID, authClient);
   await doc.loadInfo();
 
@@ -58,7 +56,7 @@ async function run() {
   await inputSheet.loadHeaderRow();
   const rows = await inputSheet.getRows();
 
-  console.log(`📦 Orders found: ${rows.length}`);
+  console.log(`📦 Order IDs found: ${rows.length}`);
 
   const collectedRows = [];
 
@@ -72,9 +70,7 @@ async function run() {
 
   for (const row of rows) {
     const orderId = row.get("Order_ID");
-    const lastProcessed = row.get("Last_Processed");
-
-    if (!orderId || lastProcessed) continue;
+    if (!orderId) continue;
 
     console.log(`🔍 Processing Order ${orderId}`);
 
@@ -130,13 +126,7 @@ async function run() {
       }
 
       collectedRows.push(data);
-
-      // ✅ Update ORDER_INPUT
-      row.set("Status", data.OrderStatus);
-      row.set("Last_Processed", new Date());
-      await row.save();
-
-      console.log(`✅ Completed ${orderId}`);
+      console.log(`✅ Collected ${orderId}`);
 
     } catch (err) {
       console.error(`❌ Failed ${orderId}:`, err.message);
@@ -153,7 +143,7 @@ async function run() {
       rows: collectedRows,
     });
   } else {
-    console.log("ℹ️ No new rows to send");
+    console.log("ℹ️ No rows to send");
   }
 
   console.log("🎉 All done");
