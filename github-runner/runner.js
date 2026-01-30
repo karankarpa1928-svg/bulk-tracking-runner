@@ -4,6 +4,7 @@
  * 2. Scrape DOLE
  * 3. Send results to Apps Script
  *************************************************/
+console.log("RUN AT:", new Date().toISOString());
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
 const { JWT } = require("google-auth-library");
