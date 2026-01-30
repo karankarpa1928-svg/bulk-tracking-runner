@@ -22,7 +22,7 @@ const TIMEOUT = 45000;
 
 // Apps Script Web App
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxIi1T738qBGJkWmibmoqtE-SoJovRbNzWIDrYg8OCxrd6rbLscFvTYWYYE9jPntDSUQA/exec";
+  "https://script.google.com/macros/s/AKfycbxwrfVbuzv48GDtnBQ8nNXe69B1AQgPw1VvZaaQ4OfgVAX5dzFi-CAp7djBR1OKVFLmgw/exec";
 
 // ==============================
 // AUTH
