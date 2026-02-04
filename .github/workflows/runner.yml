@@ -17,7 +17,9 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm install
+        working-directory: github-runner
+        run: npm ci
 
-      - name: Run node script
-        run: node github-runner/index.js
+      - name: Run runner.js
+        working-directory: github-runner
+        run: node runner.js
