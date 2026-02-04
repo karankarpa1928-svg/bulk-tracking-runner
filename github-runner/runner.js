@@ -45,8 +45,11 @@ const authClient = new JWT({
 // ==============================
 
 async function run() {
-  console.log("🚀 Runner started");
+  console.log("runner.js STARTED");
 
+setTimeout(() => {
+  console.log("runner.js STILL RUNNING after 15s");
+}, 15000);
   // ---------- READ ORDER_INPUT ----------
   const doc = new GoogleSpreadsheet(SHEET_ID, authClient);
   await doc.loadInfo();
