@@ -1,2 +1,11 @@
+name: Runner
+
 on:
   workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sanity check
+        run: echo "Workflow dispatched successfully"
