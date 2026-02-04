@@ -6,6 +6,18 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Sanity check
-        run: echo "Workflow dispatched successfully"
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run node script
+        run: node github-runner/index.js
