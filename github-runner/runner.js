@@ -1,72 +1,62 @@
 /*************************************************
- * DOLE ORDER RUNNER – ORDER_ID ONLY
- * 1. Read Order_ID from ORDER_INPUT
- * 2. Scrape DOLE
- * 3. Send results to Apps Script
+ * DOLE ORDER RUNNER – CI SAFE VERSION
  *************************************************/
 console.log("RUN AT:", new Date().toISOString());
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
-const { JWT } = require("google-auth-library");
 const puppeteer = require("puppeteer");
 const axios = require("axios");
 
 // ==============================
 // CONFIG
 // ==============================
-
 const SHEET_ID = "1g8bxorpSd56EB72QKhkLiTjgTeKluiYH6JESot06tz8";
 const INPUT_SHEET = "ORDER_INPUT";
 
 const DOLE_URL = "https://dole.my.salesforce-sites.com/truckerinfo";
 const TIMEOUT = 45000;
 
-// Apps Script Web App
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxwrfVbuzv48GDtnBQ8nNXe69B1AQgPw1VvZaaQ4OfgVAX5dzFi-CAp7djBR1OKVFLmgw/exec";
 
 // ==============================
-// AUTH
+// AUTH (ENV-BASED, CI SAFE)
 // ==============================
+const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+if (!clientEmail || !privateKey) {
   console.error("❌ Missing Google credentials");
   process.exit(1);
 }
 
-const authClient = new JWT({
-  email: process.env.GOOGLE_CLIENT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-
 // ==============================
 // MAIN
 // ==============================
-
 async function run() {
   console.log("runner.js STARTED");
 
-setTimeout(() => {
-  console.log("runner.js STILL RUNNING after 15s");
-}, 15000);
-  // ---------- READ ORDER_INPUT ----------
-  const doc = new GoogleSpreadsheet(SHEET_ID, authClient);
+  // ---------- GOOGLE SHEETS ----------
+  const doc = new GoogleSpreadsheet(SHEET_ID);
+
+  await doc.useServiceAccountAuth({
+    client_email: clientEmail,
+    private_key: privateKey,
+  });
+
   await doc.loadInfo();
 
   const inputSheet = doc.sheetsByTitle[INPUT_SHEET];
   if (!inputSheet) throw new Error("❌ ORDER_INPUT sheet not found");
 
-  await inputSheet.loadHeaderRow();
   const rows = await inputSheet.getRows();
-
   console.log(`📦 Order IDs found: ${rows.length}`);
 
   const collectedRows = [];
 
   // ---------- PUPPETEER ----------
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: "new",
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -131,7 +121,6 @@ setTimeout(() => {
 
       collectedRows.push(data);
       console.log(`✅ Collected ${orderId}`);
-
     } catch (err) {
       console.error(`❌ Failed ${orderId}:`, err.message);
     }
@@ -142,10 +131,7 @@ setTimeout(() => {
   // ---------- SEND TO APPS SCRIPT ----------
   if (collectedRows.length) {
     console.log(`📤 Sending ${collectedRows.length} rows to Apps Script`);
-
-    await axios.post(APPS_SCRIPT_URL, {
-      rows: collectedRows,
-    });
+    await axios.post(APPS_SCRIPT_URL, { rows: collectedRows });
   } else {
     console.log("ℹ️ No rows to send");
   }
@@ -156,8 +142,7 @@ setTimeout(() => {
 // ==============================
 // EXECUTE
 // ==============================
-
 run().catch(err => {
-  console.error("🔥 Fatal error:", err.message);
+  console.error("🔥 Fatal error:", err);
   process.exit(1);
 });
