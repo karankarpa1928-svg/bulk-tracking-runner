@@ -1,14 +1,10 @@
-name: DOLE Runner
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
 jobs:
   run:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: github-runner
+
     steps:
       - uses: actions/checkout@v4
 
