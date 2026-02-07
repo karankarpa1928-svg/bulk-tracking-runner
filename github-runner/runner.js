@@ -1,9 +1,11 @@
 /*************************************************
- * DOLE ORDER RUNNER – CI SAFE VERSION
+ * DOLE ORDER RUNNER – CI SAFE FINAL VERSION
  *************************************************/
+
 console.log("RUN AT:", new Date().toISOString());
 
 const { GoogleSpreadsheet } = require("google-spreadsheet");
+const { JWT } = require("google-auth-library");
 const puppeteer = require("puppeteer");
 const axios = require("axios");
 
@@ -20,7 +22,7 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxwrfVbuzv48GDtnBQ8nNXe69B1AQgPw1VvZaaQ4OfgVAX5dzFi-CAp7djBR1OKVFLmgw/exec";
 
 // ==============================
-// AUTH (ENV-BASED, CI SAFE)
+// GOOGLE AUTH (ENV BASED)
 // ==============================
 const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
 const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -30,6 +32,12 @@ if (!clientEmail || !privateKey) {
   process.exit(1);
 }
 
+const auth = new JWT({
+  email: clientEmail,
+  key: privateKey,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+
 // ==============================
 // MAIN
 // ==============================
@@ -37,17 +45,13 @@ async function run() {
   console.log("runner.js STARTED");
 
   // ---------- GOOGLE SHEETS ----------
-  const doc = new GoogleSpreadsheet(SHEET_ID);
-
-  await doc.useServiceAccountAuth({
-    client_email: clientEmail,
-    private_key: privateKey,
-  });
-
+  const doc = new GoogleSpreadsheet(SHEET_ID, auth);
   await doc.loadInfo();
 
   const inputSheet = doc.sheetsByTitle[INPUT_SHEET];
-  if (!inputSheet) throw new Error("❌ ORDER_INPUT sheet not found");
+  if (!inputSheet) {
+    throw new Error("❌ ORDER_INPUT sheet not found");
+  }
 
   const rows = await inputSheet.getRows();
   console.log(`📦 Order IDs found: ${rows.length}`);
