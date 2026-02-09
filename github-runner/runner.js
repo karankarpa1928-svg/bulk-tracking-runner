@@ -19,7 +19,7 @@ const DOLE_URL = "https://dole.my.salesforce-sites.com/truckerinfo";
 const TIMEOUT = 45000;
 
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbxgN5LglMElAMM_b7cZTLk83zA2NTgn8Mwv7EbnRmzhWWKzo_x0_u-GdNfVvhhyqKi0DQ/exec";
+  "https://script.google.com/macros/s/AKfycbyXJZDjQ2StG_rwE8psJtrwmV9eQoRMq4_C8Bh5mtmExe5FcFXuwGA2L98Mo2Dj0n5Vtg/exec";
 
 // ==============================
 // GOOGLE AUTH (ENV BASED)
