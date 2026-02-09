@@ -9,8 +9,6 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    retention-days: 3
-
     concurrency:
       group: dole-runner-main
       cancel-in-progress: false
