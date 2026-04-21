@@ -9,6 +9,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
     concurrency:
       group: dole-runner-main
       cancel-in-progress: false
@@ -19,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@v5
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
           clean: true
