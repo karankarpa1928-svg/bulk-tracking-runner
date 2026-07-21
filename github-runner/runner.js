@@ -134,6 +134,7 @@ async function run() {
     Error: err.message
   });
 }
+}
 
   await browser.close();
 
