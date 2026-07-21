@@ -57,6 +57,7 @@ async function run() {
   console.log(`📦 Order IDs found: ${rows.length}`);
 
   const collectedRows = [];
+  const failedOrders = [];
 
   // ---------- PUPPETEER ----------
   const browser = await puppeteer.launch({
@@ -126,16 +127,23 @@ async function run() {
       collectedRows.push(data);
       console.log(`✅ Collected ${orderId}`);
     } catch (err) {
-      console.error(`❌ Failed ${orderId}:`, err.message);
-    }
-  }
+  console.error(`❌ Failed ${orderId}:`, err.message);
+
+  failedOrders.push({
+    OrderNumber: orderId,
+    Error: err.message
+  });
+}
 
   await browser.close();
 
   // ---------- SEND TO APPS SCRIPT ----------
   if (collectedRows.length) {
     console.log(`📤 Sending ${collectedRows.length} rows to Apps Script`);
-    await axios.post(APPS_SCRIPT_URL, { rows: collectedRows });
+    await axios.post(APPS_SCRIPT_URL, {
+  rows: collectedRows,
+  failedOrders: failedOrders
+});
   } else {
     console.log("ℹ️ No rows to send");
   }
